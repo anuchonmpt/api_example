@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+bin/
+tmp/
+data/
+coverage.out
+coverage.html
+.DS_Store
