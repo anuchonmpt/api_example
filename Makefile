@@ -76,8 +76,8 @@ sqlc-generate: ## Generate pgx code from SQL
 sqlc-vet: ## Vet SQLC queries
 	@sqlc vet
 
-docker-up: ## Start PostgreSQL and Redis
-	@docker compose up -d postgres redis
+docker-up: ## Start PostgreSQL, Redis, and the S3-compatible MinIO service
+	@docker compose --profile s3 up -d
 
 docker-down: ## Stop local services
 	@docker compose down

@@ -54,7 +54,8 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: >-
       mc alias set local http://minio:9000 minio minio123 &&
-      mc mb --ignore-existing local/api-example
+      mc mb --ignore-existing local/api-example &&
+      mc anonymous set download local/api-example
 
 volumes:
   postgres_data:

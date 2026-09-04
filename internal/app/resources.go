@@ -50,7 +50,7 @@ func Build(ctx context.Context, cfg *config.Config) (*Runtime, error) {
 	documentRepository := repository.NewDocumentRepository(pool)
 	jwtManager := auth.NewJWTManager(cfg.JWT.Secret, cfg.JWT.Issuer, cfg.JWT.Audience, cfg.JWT.AccessTokenExpiry, cfg.JWT.RefreshTokenExpiry)
 	authService := service.NewAuthService(authRepository, jwtManager)
-	documentService := service.NewDocumentService(documentRepository, objectStorage, queue, cfg.Storage.MaxUploadBytes, cfg.Storage.AllowedMediaTypes)
+	documentService := service.NewDocumentService(documentRepository, objectStorage, queue, cfg.Storage.MaxUploadBytes, cfg.Storage.AllowedMediaTypes, cfg.Storage.CDNURL)
 	engine := router.New(router.Config{JWT: jwtManager, AuthHandler: handler.NewAuth(authService), DocumentHandler: handler.NewDocument(documentService), AllowedOrigins: cfg.CORS.AllowedOrigins})
 	return &Runtime{Router: engine, Worker: service.NewDocumentWorker(documentRepository, objectStorage), Queue: queue, stack: stack}, nil
 }

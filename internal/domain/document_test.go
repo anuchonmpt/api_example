@@ -1,6 +1,9 @@
 package domain
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestDocumentStatusValid(t *testing.T) {
 	t.Parallel()
@@ -14,6 +17,23 @@ func TestDocumentStatusValid(t *testing.T) {
 		if got := tt.status.Valid(); got != tt.valid {
 			t.Fatalf("DocumentStatus(%q).Valid() = %v", tt.status, got)
 		}
+	}
+}
+
+func TestDocumentJSONExposesURLButNotStorageKey(t *testing.T) {
+	payload, err := json.Marshal(Document{StorageKey: "documents/1/private-key", URL: "https://cdn.example.com/documents/1/private-key"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(payload, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["url"] != "https://cdn.example.com/documents/1/private-key" {
+		t.Fatalf("JSON URL = %v", got["url"])
+	}
+	if _, exists := got["storage_key"]; exists {
+		t.Fatalf("JSON must not expose storage_key: %s", payload)
 	}
 }
 

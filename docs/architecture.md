@@ -35,11 +35,15 @@ Handlers know HTTP but not SQL. Services know business rules but not Gin, pgx, R
 1. JWT middleware creates a typed actor with an `int64` user ID and role.
 2. The handler opens the multipart stream without loading the complete object into memory.
 3. The service validates filename metadata, media type, declared size, and actual streamed size.
-4. The storage adapter writes to a generated `documents/<owner>/<random>` key.
-5. The repository inserts the pending metadata row.
+4. The S3 adapter writes to a generated `documents/<owner>/<random>` key.
+5. The repository inserts the pending metadata row and stores that key in
+   `documents.storage_key`.
 6. A failed insert triggers compensating object deletion.
 7. The service enqueues the document ID after persistence.
 8. A queue failure returns a retryable error while keeping the pending row available for operational re-enqueue.
+9. API responses derive `url` as `CDN_URL + "/" + storage_key`; the database
+   remains the source of truth for the key, and the API does not expose it as a
+   separate field.
 
 ## Worker flow
 

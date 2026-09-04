@@ -27,6 +27,7 @@ type Document struct {
 	MediaType       string         `json:"media_type"`
 	SizeBytes       int64          `json:"size_bytes"`
 	StorageKey      string         `json:"-"`
+	URL             string         `json:"url,omitempty"`
 	ChecksumSHA256  *string        `json:"checksum_sha256,omitempty"`
 	Status          DocumentStatus `json:"status"`
 	ProcessingError *string        `json:"processing_error,omitempty"`

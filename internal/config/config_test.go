@@ -49,6 +49,8 @@ func TestLoadRejectsInvalidConfiguration(t *testing.T) {
 		{name: "invalid access duration", env: map[string]string{"JWT_ACCESS_TOKEN_EXPIRY": "later"}, want: "JWT_ACCESS_TOKEN_EXPIRY"},
 		{name: "invalid storage driver", env: map[string]string{"STORAGE_DRIVER": "ftp"}, want: "STORAGE_DRIVER"},
 		{name: "missing S3 bucket", env: map[string]string{"STORAGE_DRIVER": "s3", "S3_BUCKET": ""}, want: "S3_BUCKET"},
+		{name: "missing CDN URL", env: map[string]string{"STORAGE_DRIVER": "s3", "S3_BUCKET": "bucket", "CDN_URL": ""}, want: "CDN_URL"},
+		{name: "invalid CDN URL", env: map[string]string{"STORAGE_DRIVER": "s3", "S3_BUCKET": "bucket", "CDN_URL": "cdn.example.com"}, want: "CDN_URL"},
 		{name: "invalid upload limit", env: map[string]string{"STORAGE_MAX_UPLOAD_BYTES": "0"}, want: "STORAGE_MAX_UPLOAD_BYTES"},
 	}
 
@@ -92,6 +94,7 @@ func clearConfigEnv(t *testing.T) {
 		"REDIS_DOCUMENT_QUEUE", "REDIS_DOCUMENT_PROCESSING_QUEUE", "REDIS_DOCUMENT_DEAD_LETTER_QUEUE", "REDIS_DOCUMENT_MAX_ATTEMPTS",
 		"JWT_SECRET", "JWT_ISSUER", "JWT_AUDIENCE", "JWT_ACCESS_TOKEN_EXPIRY", "JWT_REFRESH_TOKEN_EXPIRY",
 		"STORAGE_DRIVER", "STORAGE_LOCAL_ROOT", "STORAGE_MAX_UPLOAD_BYTES", "STORAGE_ALLOWED_MEDIA_TYPES",
+		"CDN_URL",
 		"S3_REGION", "S3_BUCKET", "S3_ENDPOINT", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_USE_PATH_STYLE",
 		"LOG_LEVEL", "LOG_FORMAT",
 		"CORS_ALLOWED_ORIGINS",

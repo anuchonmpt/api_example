@@ -50,7 +50,7 @@ func TestDocumentServiceCreateLeavesPendingDocumentWhenQueueFails(t *testing.T) 
 }
 
 func TestDocumentServiceRejectsOversizedStream(t *testing.T) {
-	service := NewDocumentService(&fakeDocumentRepository{}, &fakeObjectStorage{}, &fakeDocumentQueue{}, 4, []string{"text/plain"})
+	service := NewDocumentService(&fakeDocumentRepository{}, &fakeObjectStorage{}, &fakeDocumentQueue{}, 4, []string{"text/plain"}, "https://cdn.example.com")
 	service.keyGenerator = func() (string, error) { return "fixed-key", nil }
 	_, err := service.Create(context.Background(), domain.Actor{UserID: 1, Role: domain.RoleUser}, UploadInput{OriginalName: "file.txt", MediaType: "text/plain", SizeBytes: 4, Body: strings.NewReader("12345")})
 	if !errors.Is(err, apperrors.ErrDocumentInvalidRequest) {
@@ -75,13 +75,32 @@ func TestDocumentServiceAuthorizationAndDownload(t *testing.T) {
 	}
 	defer func() { _ = object.Body.Close() }()
 	data, _ := io.ReadAll(object.Body)
-	if string(data) != "content" || gotDocument.ID != 9 {
+	if string(data) != "content" || gotDocument.ID != 9 || gotDocument.URL != "https://cdn.example.com/assets/documents/2/key" {
 		t.Fatalf("download = %q %+v", data, gotDocument)
 	}
 }
 
+func TestDocumentServiceAddsCDNURLToCreateAndList(t *testing.T) {
+	repository := &fakeDocumentRepository{}
+	service := newTestDocumentService(repository, &fakeObjectStorage{}, &fakeDocumentQueue{})
+	document, err := service.Create(context.Background(), domain.Actor{UserID: 7, Role: domain.RoleUser}, UploadInput{OriginalName: "report.pdf", MediaType: "application/pdf", SizeBytes: 5, Body: strings.NewReader("hello")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.URL != "https://cdn.example.com/assets/documents/7/fixed-key" {
+		t.Fatalf("Create() URL = %q", document.URL)
+	}
+	page, err := service.List(context.Background(), domain.Actor{UserID: 7, Role: domain.RoleUser}, domain.Pagination{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 1 || page.Items[0].URL != document.URL {
+		t.Fatalf("List() items = %+v", page.Items)
+	}
+}
+
 func newTestDocumentService(repository domain.DocumentRepository, storage domain.ObjectStorage, queue domain.DocumentQueue) *DocumentService {
-	service := NewDocumentService(repository, storage, queue, 1024, []string{"application/pdf", "text/plain"})
+	service := NewDocumentService(repository, storage, queue, 1024, []string{"application/pdf", "text/plain"}, "https://cdn.example.com/assets/")
 	service.keyGenerator = func() (string, error) { return "fixed-key", nil }
 	return service
 }

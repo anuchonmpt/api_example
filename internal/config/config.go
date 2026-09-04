@@ -80,6 +80,7 @@ type StorageConfig struct {
 	LocalRoot         string
 	MaxUploadBytes    int64
 	AllowedMediaTypes []string
+	CDNURL            string
 	S3                S3Config
 }
 
@@ -162,6 +163,7 @@ func Load() (*Config, error) {
 		Storage: StorageConfig{
 			Driver: env("STORAGE_DRIVER", "local"), LocalRoot: env("STORAGE_LOCAL_ROOT", "./data"), MaxUploadBytes: maxUpload,
 			AllowedMediaTypes: envList("STORAGE_ALLOWED_MEDIA_TYPES", []string{"application/pdf", "image/jpeg", "image/png", "text/plain"}),
+			CDNURL:            strings.TrimRight(strings.TrimSpace(os.Getenv("CDN_URL")), "/"),
 			S3:                S3Config{Region: env("S3_REGION", "us-east-1"), Bucket: os.Getenv("S3_BUCKET"), Endpoint: os.Getenv("S3_ENDPOINT"), AccessKeyID: os.Getenv("S3_ACCESS_KEY_ID"), SecretAccessKey: os.Getenv("S3_SECRET_ACCESS_KEY"), UsePathStyle: pathStyle},
 		},
 		Logging: LoggingConfig{Level: env("LOG_LEVEL", "info"), Format: env("LOG_FORMAT", "colored_text")},
@@ -202,8 +204,22 @@ func (c *Config) Validate() error {
 		if strings.TrimSpace(c.Storage.S3.Bucket) == "" {
 			return fmt.Errorf("S3_BUCKET must not be empty")
 		}
+		if err := validateCDNURL(c.Storage.CDNURL); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("STORAGE_DRIVER must be local or s3")
+	}
+	return nil
+}
+
+func validateCDNURL(value string) error {
+	if strings.TrimSpace(value) == "" {
+		return fmt.Errorf("CDN_URL must not be empty when STORAGE_DRIVER=s3")
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("CDN_URL must be an absolute HTTP(S) URL without query or fragment")
 	}
 	return nil
 }

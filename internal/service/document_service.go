@@ -27,15 +27,16 @@ type DocumentService struct {
 	queue            domain.DocumentQueue
 	maxUploadBytes   int64
 	allowedMediaType map[string]struct{}
+	cdnURL           string
 	keyGenerator     func() (string, error)
 }
 
-func NewDocumentService(repository domain.DocumentRepository, storage domain.ObjectStorage, queue domain.DocumentQueue, maxUploadBytes int64, allowedMediaTypes []string) *DocumentService {
+func NewDocumentService(repository domain.DocumentRepository, storage domain.ObjectStorage, queue domain.DocumentQueue, maxUploadBytes int64, allowedMediaTypes []string, cdnURL string) *DocumentService {
 	allowed := make(map[string]struct{}, len(allowedMediaTypes))
 	for _, mediaType := range allowedMediaTypes {
 		allowed[strings.ToLower(strings.TrimSpace(mediaType))] = struct{}{}
 	}
-	return &DocumentService{repository: repository, storage: storage, queue: queue, maxUploadBytes: maxUploadBytes, allowedMediaType: allowed, keyGenerator: randomObjectID}
+	return &DocumentService{repository: repository, storage: storage, queue: queue, maxUploadBytes: maxUploadBytes, allowedMediaType: allowed, cdnURL: strings.TrimRight(strings.TrimSpace(cdnURL), "/"), keyGenerator: randomObjectID}
 }
 
 func (s *DocumentService) Create(ctx context.Context, actor domain.Actor, input UploadInput) (*domain.Document, error) {
@@ -72,6 +73,7 @@ func (s *DocumentService) Create(ctx context.Context, actor domain.Actor, input 
 		}
 		return nil, err
 	}
+	s.setPublicURL(document)
 	if err := s.queue.Enqueue(ctx, domain.DocumentJob{DocumentID: document.ID, Attempt: 1}); err != nil {
 		return document, apperrors.Wrap(apperrors.ErrQueueUnavailable, err)
 	}
@@ -86,6 +88,7 @@ func (s *DocumentService) Get(ctx context.Context, actor domain.Actor, id int64)
 	if err := authorizeDocument(actor, document); err != nil {
 		return nil, err
 	}
+	s.setPublicURL(document)
 	return document, nil
 }
 
@@ -106,7 +109,17 @@ func (s *DocumentService) List(ctx context.Context, actor domain.Actor, paginati
 	if items == nil {
 		items = []domain.Document{}
 	}
+	for index := range items {
+		s.setPublicURL(&items[index])
+	}
 	return &domain.Page[domain.Document]{Items: items, Page: pagination.Page, PageSize: pagination.PageSize, TotalItems: total}, nil
+}
+
+func (s *DocumentService) setPublicURL(document *domain.Document) {
+	if document == nil || s.cdnURL == "" || document.StorageKey == "" {
+		return
+	}
+	document.URL = s.cdnURL + "/" + strings.TrimLeft(document.StorageKey, "/")
 }
 
 func (s *DocumentService) Download(ctx context.Context, actor domain.Actor, id int64) (*domain.StoredObject, *domain.Document, error) {
