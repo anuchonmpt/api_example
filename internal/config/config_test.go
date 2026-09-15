@@ -48,9 +48,9 @@ func TestLoadRejectsInvalidConfiguration(t *testing.T) {
 		{name: "short JWT secret", env: map[string]string{"JWT_SECRET": "short"}, want: "at least 32"},
 		{name: "invalid access duration", env: map[string]string{"JWT_ACCESS_TOKEN_EXPIRY": "later"}, want: "JWT_ACCESS_TOKEN_EXPIRY"},
 		{name: "invalid storage driver", env: map[string]string{"STORAGE_DRIVER": "ftp"}, want: "STORAGE_DRIVER"},
-		{name: "missing S3 bucket", env: map[string]string{"STORAGE_DRIVER": "s3", "S3_BUCKET": ""}, want: "S3_BUCKET"},
-		{name: "missing CDN URL", env: map[string]string{"STORAGE_DRIVER": "s3", "S3_BUCKET": "bucket", "CDN_URL": ""}, want: "CDN_URL"},
-		{name: "invalid CDN URL", env: map[string]string{"STORAGE_DRIVER": "s3", "S3_BUCKET": "bucket", "CDN_URL": "cdn.example.com"}, want: "CDN_URL"},
+		{name: "missing S3 bucket", env: map[string]string{"STORAGE_DRIVER": "s3", "AWS_S3_BUCKET": ""}, want: "AWS_S3_BUCKET"},
+		{name: "missing CDN URL", env: map[string]string{"STORAGE_DRIVER": "s3", "AWS_S3_BUCKET": "bucket", "CDN_URL": ""}, want: "CDN_URL"},
+		{name: "invalid CDN URL", env: map[string]string{"STORAGE_DRIVER": "s3", "AWS_S3_BUCKET": "bucket", "CDN_URL": "cdn.example.com"}, want: "CDN_URL"},
 		{name: "invalid upload limit", env: map[string]string{"STORAGE_MAX_UPLOAD_BYTES": "0"}, want: "STORAGE_MAX_UPLOAD_BYTES"},
 	}
 
@@ -84,6 +84,32 @@ func TestDatabaseURLPercentEscapesCredentials(t *testing.T) {
 	}
 }
 
+func TestLoadAWSStorageConfiguration(t *testing.T) {
+	clearConfigEnv(t)
+	t.Setenv("APP_ENV", "test")
+	t.Setenv("JWT_SECRET", strings.Repeat("s", 32))
+	t.Setenv("STORAGE_DRIVER", "s3")
+	t.Setenv("AWS_ACCESS_KEY_ID", "access-key")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "secret-key")
+	t.Setenv("AWS_REGION", "ap-southeast-1")
+	t.Setenv("AWS_S3_BUCKET", "documents")
+	t.Setenv("CDN_URL", "https://cdn.example.com/")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.Storage.S3.AccessKeyID != "access-key" || cfg.Storage.S3.SecretAccessKey != "secret-key" {
+		t.Fatalf("unexpected S3 credentials: %+v", cfg.Storage.S3)
+	}
+	if cfg.Storage.S3.Region != "ap-southeast-1" || cfg.Storage.S3.Bucket != "documents" {
+		t.Fatalf("unexpected S3 location: %+v", cfg.Storage.S3)
+	}
+	if cfg.Storage.CDNURL != "https://cdn.example.com" {
+		t.Fatalf("Storage.CDNURL = %q", cfg.Storage.CDNURL)
+	}
+}
+
 func clearConfigEnv(t *testing.T) {
 	t.Helper()
 	keys := []string{
@@ -95,7 +121,8 @@ func clearConfigEnv(t *testing.T) {
 		"JWT_SECRET", "JWT_ISSUER", "JWT_AUDIENCE", "JWT_ACCESS_TOKEN_EXPIRY", "JWT_REFRESH_TOKEN_EXPIRY",
 		"STORAGE_DRIVER", "STORAGE_LOCAL_ROOT", "STORAGE_MAX_UPLOAD_BYTES", "STORAGE_ALLOWED_MEDIA_TYPES",
 		"CDN_URL",
-		"S3_REGION", "S3_BUCKET", "S3_ENDPOINT", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_USE_PATH_STYLE",
+		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "AWS_S3_BUCKET",
+		"S3_ENDPOINT", "S3_USE_PATH_STYLE",
 		"LOG_LEVEL", "LOG_FORMAT",
 		"CORS_ALLOWED_ORIGINS",
 	}

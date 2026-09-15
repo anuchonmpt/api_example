@@ -164,7 +164,7 @@ func Load() (*Config, error) {
 			Driver: env("STORAGE_DRIVER", "local"), LocalRoot: env("STORAGE_LOCAL_ROOT", "./data"), MaxUploadBytes: maxUpload,
 			AllowedMediaTypes: envList("STORAGE_ALLOWED_MEDIA_TYPES", []string{"application/pdf", "image/jpeg", "image/png", "text/plain"}),
 			CDNURL:            strings.TrimRight(strings.TrimSpace(os.Getenv("CDN_URL")), "/"),
-			S3:                S3Config{Region: env("S3_REGION", "us-east-1"), Bucket: os.Getenv("S3_BUCKET"), Endpoint: os.Getenv("S3_ENDPOINT"), AccessKeyID: os.Getenv("S3_ACCESS_KEY_ID"), SecretAccessKey: os.Getenv("S3_SECRET_ACCESS_KEY"), UsePathStyle: pathStyle},
+			S3:                S3Config{Region: env("AWS_REGION", "ap-southeast-1"), Bucket: os.Getenv("AWS_S3_BUCKET"), Endpoint: os.Getenv("S3_ENDPOINT"), AccessKeyID: os.Getenv("AWS_ACCESS_KEY_ID"), SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"), UsePathStyle: pathStyle},
 		},
 		Logging: LoggingConfig{Level: env("LOG_LEVEL", "info"), Format: env("LOG_FORMAT", "colored_text")},
 		CORS:    CORSConfig{AllowedOrigins: envList("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000"})},
@@ -202,7 +202,7 @@ func (c *Config) Validate() error {
 		}
 	case "s3":
 		if strings.TrimSpace(c.Storage.S3.Bucket) == "" {
-			return fmt.Errorf("S3_BUCKET must not be empty")
+			return fmt.Errorf("AWS_S3_BUCKET must not be empty")
 		}
 		if err := validateCDNURL(c.Storage.CDNURL); err != nil {
 			return err
