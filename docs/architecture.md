@@ -35,7 +35,8 @@ Handlers know HTTP but not SQL. Services know business rules but not Gin, pgx, R
 1. JWT middleware creates a typed actor with an `int64` user ID and role.
 2. The handler opens the multipart stream without loading the complete object into memory.
 3. The service validates filename metadata, media type, declared size, and actual streamed size.
-4. The S3 adapter writes to a generated `documents/<owner>/<random>` key.
+4. The service generates an `<AWS_S3_PREFIX>/documents/<owner>/<random>` key
+   (omitting the prefix segment when unset), isolating objects in shared buckets.
 5. The repository inserts the pending metadata row and stores that key in
    `documents.storage_key`.
 6. A failed insert triggers compensating object deletion.

@@ -19,11 +19,14 @@ func TestDocumentServiceCreateStoresPersistsAndEnqueues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if storage.key != "documents/7/fixed-key" || storage.body != "hello" {
+	if storage.key != "api-example/documents/7/fixed-key" || storage.body != "hello" {
 		t.Fatalf("stored key=%q body=%q", storage.key, storage.body)
 	}
 	if repository.created.OriginalName != "report.pdf" || document.ID == 0 {
 		t.Fatalf("created = %+v", repository.created)
+	}
+	if repository.created.StorageKey != storage.key || document.URL != "https://cdn.example.com/assets/api-example/documents/7/fixed-key" {
+		t.Fatalf("storage key=%q URL=%q", repository.created.StorageKey, document.URL)
 	}
 	if queue.job.DocumentID != document.ID || queue.job.Attempt != 1 {
 		t.Fatalf("job = %+v", queue.job)
@@ -35,7 +38,7 @@ func TestDocumentServiceCreateCompensatesRepositoryFailure(t *testing.T) {
 	storage := &fakeObjectStorage{}
 	service := newTestDocumentService(repository, storage, &fakeDocumentQueue{})
 	_, err := service.Create(context.Background(), domain.Actor{UserID: 1, Role: domain.RoleUser}, UploadInput{OriginalName: "file.txt", MediaType: "text/plain", SizeBytes: 1, Body: strings.NewReader("x")})
-	if err == nil || storage.deletedKey != "documents/1/fixed-key" {
+	if err == nil || storage.deletedKey != "api-example/documents/1/fixed-key" {
 		t.Fatalf("error=%v deleted=%q", err, storage.deletedKey)
 	}
 }
@@ -50,7 +53,7 @@ func TestDocumentServiceCreateLeavesPendingDocumentWhenQueueFails(t *testing.T) 
 }
 
 func TestDocumentServiceRejectsOversizedStream(t *testing.T) {
-	service := NewDocumentService(&fakeDocumentRepository{}, &fakeObjectStorage{}, &fakeDocumentQueue{}, 4, []string{"text/plain"}, "https://cdn.example.com")
+	service := NewDocumentService(&fakeDocumentRepository{}, &fakeObjectStorage{}, &fakeDocumentQueue{}, 4, []string{"text/plain"}, "https://cdn.example.com", "api-example")
 	service.keyGenerator = func() (string, error) { return "fixed-key", nil }
 	_, err := service.Create(context.Background(), domain.Actor{UserID: 1, Role: domain.RoleUser}, UploadInput{OriginalName: "file.txt", MediaType: "text/plain", SizeBytes: 4, Body: strings.NewReader("12345")})
 	if !errors.Is(err, apperrors.ErrDocumentInvalidRequest) {
@@ -87,7 +90,7 @@ func TestDocumentServiceAddsCDNURLToCreateAndList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if document.URL != "https://cdn.example.com/assets/documents/7/fixed-key" {
+	if document.URL != "https://cdn.example.com/assets/api-example/documents/7/fixed-key" {
 		t.Fatalf("Create() URL = %q", document.URL)
 	}
 	page, err := service.List(context.Background(), domain.Actor{UserID: 7, Role: domain.RoleUser}, domain.Pagination{})
@@ -100,7 +103,7 @@ func TestDocumentServiceAddsCDNURLToCreateAndList(t *testing.T) {
 }
 
 func newTestDocumentService(repository domain.DocumentRepository, storage domain.ObjectStorage, queue domain.DocumentQueue) *DocumentService {
-	service := NewDocumentService(repository, storage, queue, 1024, []string{"application/pdf", "text/plain"}, "https://cdn.example.com/assets/")
+	service := NewDocumentService(repository, storage, queue, 1024, []string{"application/pdf", "text/plain"}, "https://cdn.example.com/assets/", "api-example")
 	service.keyGenerator = func() (string, error) { return "fixed-key", nil }
 	return service
 }

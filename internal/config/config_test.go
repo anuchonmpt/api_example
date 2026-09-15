@@ -51,6 +51,7 @@ func TestLoadRejectsInvalidConfiguration(t *testing.T) {
 		{name: "missing S3 bucket", env: map[string]string{"STORAGE_DRIVER": "s3", "AWS_S3_BUCKET": ""}, want: "AWS_S3_BUCKET"},
 		{name: "missing CDN URL", env: map[string]string{"STORAGE_DRIVER": "s3", "AWS_S3_BUCKET": "bucket", "CDN_URL": ""}, want: "CDN_URL"},
 		{name: "invalid CDN URL", env: map[string]string{"STORAGE_DRIVER": "s3", "AWS_S3_BUCKET": "bucket", "CDN_URL": "cdn.example.com"}, want: "CDN_URL"},
+		{name: "invalid S3 prefix", env: map[string]string{"STORAGE_DRIVER": "s3", "AWS_S3_BUCKET": "bucket", "AWS_S3_PREFIX": "../other-project", "CDN_URL": "https://cdn.example.com"}, want: "AWS_S3_PREFIX"},
 		{name: "invalid upload limit", env: map[string]string{"STORAGE_MAX_UPLOAD_BYTES": "0"}, want: "STORAGE_MAX_UPLOAD_BYTES"},
 	}
 
@@ -93,6 +94,7 @@ func TestLoadAWSStorageConfiguration(t *testing.T) {
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "secret-key")
 	t.Setenv("AWS_REGION", "ap-southeast-1")
 	t.Setenv("AWS_S3_BUCKET", "documents")
+	t.Setenv("AWS_S3_PREFIX", "/api-example/")
 	t.Setenv("CDN_URL", "https://cdn.example.com/")
 
 	cfg, err := Load()
@@ -102,7 +104,7 @@ func TestLoadAWSStorageConfiguration(t *testing.T) {
 	if cfg.Storage.S3.AccessKeyID != "access-key" || cfg.Storage.S3.SecretAccessKey != "secret-key" {
 		t.Fatalf("unexpected S3 credentials: %+v", cfg.Storage.S3)
 	}
-	if cfg.Storage.S3.Region != "ap-southeast-1" || cfg.Storage.S3.Bucket != "documents" {
+	if cfg.Storage.S3.Region != "ap-southeast-1" || cfg.Storage.S3.Bucket != "documents" || cfg.Storage.S3.Prefix != "api-example" {
 		t.Fatalf("unexpected S3 location: %+v", cfg.Storage.S3)
 	}
 	if cfg.Storage.CDNURL != "https://cdn.example.com" {
@@ -121,7 +123,7 @@ func clearConfigEnv(t *testing.T) {
 		"JWT_SECRET", "JWT_ISSUER", "JWT_AUDIENCE", "JWT_ACCESS_TOKEN_EXPIRY", "JWT_REFRESH_TOKEN_EXPIRY",
 		"STORAGE_DRIVER", "STORAGE_LOCAL_ROOT", "STORAGE_MAX_UPLOAD_BYTES", "STORAGE_ALLOWED_MEDIA_TYPES",
 		"CDN_URL",
-		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "AWS_S3_BUCKET",
+		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "AWS_S3_BUCKET", "AWS_S3_PREFIX",
 		"S3_ENDPOINT", "S3_USE_PATH_STYLE",
 		"LOG_LEVEL", "LOG_FORMAT",
 		"CORS_ALLOWED_ORIGINS",

@@ -16,13 +16,13 @@ func TestS3StorageForwardsStreamingOperations(t *testing.T) {
 	fake := &fakeS3{getBody: "stored"}
 	store := newS3Store(fake, "bucket")
 	ctx := context.Background()
-	if err := store.Put(ctx, "documents/1/key", strings.NewReader("upload"), domain.ObjectMetadata{MediaType: "text/plain"}); err != nil {
+	if err := store.Put(ctx, "api-example/documents/1/key", strings.NewReader("upload"), domain.ObjectMetadata{MediaType: "text/plain"}); err != nil {
 		t.Fatal(err)
 	}
-	if fake.putBucket != "bucket" || fake.putKey != "documents/1/key" || fake.putBody != "upload" || fake.contentType != "text/plain" {
+	if fake.putBucket != "bucket" || fake.putKey != "api-example/documents/1/key" || fake.putBody != "upload" || fake.contentType != "text/plain" {
 		t.Fatalf("put = %+v", fake)
 	}
-	object, err := store.Open(ctx, "documents/1/key")
+	object, err := store.Open(ctx, "api-example/documents/1/key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,15 +31,18 @@ func TestS3StorageForwardsStreamingOperations(t *testing.T) {
 	if string(data) != "stored" {
 		t.Fatalf("body = %q", data)
 	}
-	if err := store.Delete(ctx, "documents/1/key"); err != nil {
+	if fake.getKey != "api-example/documents/1/key" {
+		t.Fatalf("get key = %q", fake.getKey)
+	}
+	if err := store.Delete(ctx, "api-example/documents/1/key"); err != nil {
 		t.Fatal(err)
 	}
-	if fake.deleteKey != "documents/1/key" {
+	if fake.deleteKey != "api-example/documents/1/key" {
 		t.Fatalf("delete key = %q", fake.deleteKey)
 	}
 }
 
-type fakeS3 struct{ putBucket, putKey, putBody, contentType, getBody, deleteKey string }
+type fakeS3 struct{ putBucket, putKey, putBody, contentType, getBody, getKey, deleteKey string }
 
 func (f *fakeS3) PutObject(_ context.Context, input *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
 	f.putBucket, f.putKey, f.contentType = *input.Bucket, *input.Key, *input.ContentType
@@ -47,7 +50,8 @@ func (f *fakeS3) PutObject(_ context.Context, input *s3.PutObjectInput, _ ...fun
 	f.putBody = string(data)
 	return &s3.PutObjectOutput{}, nil
 }
-func (f *fakeS3) GetObject(_ context.Context, _ *s3.GetObjectInput, _ ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
+func (f *fakeS3) GetObject(_ context.Context, input *s3.GetObjectInput, _ ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
+	f.getKey = *input.Key
 	size := int64(len(f.getBody))
 	return &s3.GetObjectOutput{Body: io.NopCloser(bytes.NewBufferString(f.getBody)), ContentLength: &size}, nil
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -28,15 +29,16 @@ type DocumentService struct {
 	maxUploadBytes   int64
 	allowedMediaType map[string]struct{}
 	cdnURL           string
+	storageKeyPrefix string
 	keyGenerator     func() (string, error)
 }
 
-func NewDocumentService(repository domain.DocumentRepository, storage domain.ObjectStorage, queue domain.DocumentQueue, maxUploadBytes int64, allowedMediaTypes []string, cdnURL string) *DocumentService {
+func NewDocumentService(repository domain.DocumentRepository, storage domain.ObjectStorage, queue domain.DocumentQueue, maxUploadBytes int64, allowedMediaTypes []string, cdnURL, storageKeyPrefix string) *DocumentService {
 	allowed := make(map[string]struct{}, len(allowedMediaTypes))
 	for _, mediaType := range allowedMediaTypes {
 		allowed[strings.ToLower(strings.TrimSpace(mediaType))] = struct{}{}
 	}
-	return &DocumentService{repository: repository, storage: storage, queue: queue, maxUploadBytes: maxUploadBytes, allowedMediaType: allowed, cdnURL: strings.TrimRight(strings.TrimSpace(cdnURL), "/"), keyGenerator: randomObjectID}
+	return &DocumentService{repository: repository, storage: storage, queue: queue, maxUploadBytes: maxUploadBytes, allowedMediaType: allowed, cdnURL: strings.TrimRight(strings.TrimSpace(cdnURL), "/"), storageKeyPrefix: strings.Trim(strings.TrimSpace(storageKeyPrefix), "/"), keyGenerator: randomObjectID}
 }
 
 func (s *DocumentService) Create(ctx context.Context, actor domain.Actor, input UploadInput) (*domain.Document, error) {
@@ -59,6 +61,9 @@ func (s *DocumentService) Create(ctx context.Context, actor domain.Actor, input 
 		return nil, fmt.Errorf("generate storage key: %w", err)
 	}
 	key := fmt.Sprintf("documents/%d/%s", actor.UserID, id)
+	if s.storageKeyPrefix != "" {
+		key = path.Join(s.storageKeyPrefix, key)
+	}
 	counter := &countingReader{reader: &maxBytesReader{reader: input.Body, remaining: s.maxUploadBytes}}
 	if err := s.storage.Put(ctx, key, counter, domain.ObjectMetadata{MediaType: mediaType}); err != nil {
 		if errors.Is(err, errUploadTooLarge) {
