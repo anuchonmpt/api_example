@@ -18,6 +18,7 @@ func TestStarterRootContract(t *testing.T) {
 		"Dockerfile",
 		"docker-compose.yml",
 		"sqlc.yaml",
+		"api-spec.yml",
 		".env.example",
 	}
 
@@ -55,7 +56,7 @@ func TestStarterReuseDocumentationAndIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, phrase := range []string{"git init", "github.com/example/api-example", "cp .env.example .env", "STORAGE_DRIVER", "make sqlc-generate", "make docker-up", "make migrate-up", "make test"} {
+	for _, phrase := range []string{"git init", "github.com/example/api-example", "cp .env.example .env", "STORAGE_DRIVER", "api-spec.yml", "make sqlc-generate", "make docker-up", "make migrate-up", "make test"} {
 		if !strings.Contains(string(readme), phrase) {
 			t.Fatalf("README is missing %q", phrase)
 		}

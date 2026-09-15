@@ -31,6 +31,13 @@ make worker
 
 Use `make help` to see every supported command.
 
+## API contract
+
+`api-spec.yml` is the authoritative OpenAPI contract for the HTTP API. Every
+route, request, response, authentication, or public schema change must update
+`api-spec.yml` in the same change. Keep handler tests aligned with the contract
+and review the spec as part of `make test` verification.
+
 ## API example
 
 Register and capture the access token from the response:

@@ -103,3 +103,7 @@ Codes follow `E + Domain(2) + Type(2) + Sequence(4)`. Domain `00` is common, `01
 ## Testing boundaries
 
 Core tests use handwritten implementations of domain ports. Repository conversion tests exercise SQLC types without a live database. Storage tests use temporary directories and a narrow fake S3 API. Queue tests use a narrow fake list backend. Handler tests use Gin and `httptest`; application tests verify resource ownership and shutdown order.
+
+The root `api-spec.yml` is the authoritative HTTP contract. Route, request,
+response, authentication, and public schema changes must update it in the same
+change, and handler tests must remain aligned with that contract.
